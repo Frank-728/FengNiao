@@ -93,6 +93,38 @@ struct SwiftMemberAccessSearchRule: FileSearchRule {
     }
 }
 
+/// Search for Generated Asset Symbol patterns in Objective-C files.
+/// Objective-C uses constants like `ACImageNameIcFlag` for image assets and `ACColorNameCustomAccent` for color assets.
+/// Example: "ic_flag.png" -> "ACImageNameIcFlag"
+/// Example: "custom_accent" -> "ACColorNameCustomAccent"
+struct ObjCMemberAccessSearchRule: FileSearchRule {
+    func search(in content: String) -> Set<String> {
+        let nsstring = NSString(string: content)
+        var result = Set<String>()
+        
+        // Match patterns for images and colors
+        result.formUnion(matchSymbols(in: content, prefix: "ACImageName", nsstring: nsstring))
+        
+        return result
+    }
+    
+    private func matchSymbols(in content: String, prefix: String, nsstring: NSString) -> Set<String> {
+        var result = Set<String>()
+        // Escape the prefix for use in regex pattern
+        let escapedPrefix = NSRegularExpression.escapedPattern(for: prefix)
+        let pattern = "\(escapedPrefix)([A-Z][a-zA-Z0-9]*)"
+        let reg = try! NSRegularExpression(pattern: pattern, options: [])
+        let matches = reg.matches(in: content, options: [], range: content.fullRange)
+        for match in matches {
+            let identifierRange = match.range(at: 1)
+            guard identifierRange.location != NSNotFound else { continue }
+            let identifier = nsstring.substring(with: identifierRange)
+            result.insert("\(prefix)\(identifier)")
+        }
+        return result
+    }
+}
+
 struct XibImageSearchRule: RegPatternSearchRule {
     let extensions = [String]()
     let patterns = ["image name=\"(.*?)\"", "image=\"(.*?)\"", "value=\"(.*?)\""]

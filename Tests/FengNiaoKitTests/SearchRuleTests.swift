@@ -134,4 +134,33 @@ struct SearchRuleTests {
         let result = searcher.search(in: content)
         #expect(result.isEmpty)
     }
+
+    @Test("Objective-C member access rule applies to generated symbols")
+    func objcMemberAccessRuleAppliesToGeneratedSymbols() {
+        let searcher = ObjCMemberAccessSearchRule()
+        let content = """
+        UIImage *flag = [UIImage imageNamed:ACImageNameIcFlag];
+        UIImage *highlighted = [UIImage imageNamed:ACImageNameIcFlagHighlighted];
+        NSImage *legacy = [NSImage imageNamed:ACImageNameIcFlagSecondary];
+        NSString *name = ACImageNameIcFlag;
+        """
+        let result = searcher.search(in: content)
+        let expected: Set<String> = [
+            "ACImageNameIcFlag",
+            "ACImageNameIcFlagHighlighted",
+            "ACImageNameIcFlagSecondary",
+        ]
+        #expect(result == expected)
+    }
+
+    @Test("Objective-C member access rule ignores regular constants")
+    func objcMemberAccessRuleIgnoresRegularConstants() {
+        let searcher = ObjCMemberAccessSearchRule()
+        let content = """
+        NSString *name = kImageName;
+        NSString *other = SomeOtherConstant;
+        """
+        let result = searcher.search(in: content)
+        #expect(result.isEmpty)
+    }
 }
